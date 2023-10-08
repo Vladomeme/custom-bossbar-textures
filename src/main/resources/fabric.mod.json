@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "cbt",
+  "version": "${version}",
+
+  "name": "Custom Bossbar Textures",
+  "description": "Adds custom texture functionality to bossbars and makes them highly configurable.",
+  "authors": [
+    "Vladomeme"
+  ],
+
+  "license": "MIT",
+
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "net.cbt.main.CBTClient"
+    ],
+    "modmenu": [
+      "net.cbt.main.CBTModMenu"
+    ]
+  },
+  "mixins": [
+    "cbt.mixins.json"
+  ],
+  "accessWidener" : "cbt.accesswidener",
+  "depends": {
+    "fabricloader": ">=0.14.21",
+    "fabric": "*",
+    "fabric-key-binding-api-v1": "*",
+    "minecraft": "~1.20.1",
+    "java": ">=17"
+  }
+}

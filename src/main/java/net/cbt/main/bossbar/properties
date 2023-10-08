@@ -1,0 +1,5 @@
+//left, right, double, double_reverse
+type=left
+name=Silver Construct
+texture=silver_construct_bossbar
+overlay=silver_construct_overlay
