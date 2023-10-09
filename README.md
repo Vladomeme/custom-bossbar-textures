@@ -25,3 +25,18 @@ Bossbar types:
   Size of the bar in overlay will be calculated using leftmost and rightmost non-fully transparent pixels.
   
 6. Put the texture and the overlay in the same folder as the `.bossbar` file.
+
+## Phase texture changes
+You can change the bossbar texture depending on how much health is left. For that add these lines to your `.bossbar` file.
+>texture.<%HP left>=<texture name without ".png">  
+>overlay.<%HP left>=<overlay name without ".png">
+  
+For example:  
+>type=normal  
+>name=Silver Construct  
+>texture=silver_construct_texture_1  
+>overlay=silver_construct_overlay_1  
+>texture.66.6=silver_construct_texture_2  
+>overlay.66.6=silver_construct_overlay_2  
+>texture.33.3=silver_construct_texture_3  
+>overlay.33.3=silver_construct_overlay_3  
