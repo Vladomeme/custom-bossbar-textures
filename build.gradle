@@ -30,10 +30,6 @@ dependencies {
 	modCompileOnly("com.terraformersmc:modmenu:${project.modmenu}") {
 		exclude(group: "net.fabricmc.fabric-api")
 	}
-	modApi "ch.njol.minecraft:ui-framework-mc1_20:${project.ui_framework_version}"
-	include "ch.njol.minecraft:ui-framework-mc1_20:${project.ui_framework_version}"
-	modApi "ch.njol.minecraft:config-framework-mc1_20:${project.config_framework_version}"
-	include "ch.njol.minecraft:config-framework-mc1_20:${project.config_framework_version}"
 }
 
 processResources {

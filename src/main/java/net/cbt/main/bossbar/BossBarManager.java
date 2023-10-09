@@ -10,10 +10,7 @@ import net.minecraft.entity.boss.BossBar;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class BossBarManager {
 
@@ -34,9 +31,10 @@ public class BossBarManager {
         int width = context.getScaledWindowWidth();
         int height = 12;
         for (BossBar bossBar : this.bossBars.values()) {
-            if (customBossBars.containsKey((bossBar.getName().getString()))) {
-                this.renderCustomBossBar(context, width, height, customBossBars.get(bossBar.getName().getString()), bossBar);
-                height += customBossBars.get(bossBar.getName().getString()).height();
+            String name = bossBar.getName().getString();
+            if (customBossBars.containsKey(name)) {
+                this.renderCustomBossBar(context, width, height, customBossBars.get(name), bossBar);
+                height += customBossBars.get(name).height();
             }
             else {
                 this.renderDefaultBossBar(context, width, height, bossBar);
@@ -50,36 +48,46 @@ public class BossBarManager {
         float right = (float) width / 2 - (float) bossBar.width() / 2;
         int barHalf = (bossBar.right() - bossBar.left()) / 2;
 
+        float phase = getTextureKey(bossBar.phases(), source.getPercent());
+        Identifier texture = bossBar.textures().get(phase);
+        Identifier overlay = bossBar.overlays().get(phase);
+
         RenderSystem.enableBlend();
-        context.drawTexture(bossBar.texture(), (int) right, height,
-                100, 0, 0, bossBar.width(), bossBar.height(), bossBar.width(), bossBar.height());
+        context.drawTexture(texture, (int) right, height, 100,
+                0, 0, bossBar.width(), bossBar.height(), bossBar.width(), bossBar.height());
 
         int barLength = (int) (source.getPercent() * (float) (bossBar.right() - bossBar.left()));
 
         if (barLength > 0) {
             switch (bossBar.type()) {
-                case NORMAL -> context.drawTexture(bossBar.overlay(), (int) right + bossBar.left(), height,
-                        110, bossBar.left(), 0, barLength, bossBar.height(), bossBar.width(), bossBar.height());
+                case NORMAL -> context.drawTexture(overlay, (int) right + bossBar.left(), height, 110,
+                        bossBar.left(), 0, barLength, bossBar.height(), bossBar.width(), bossBar.height());
 
-                case REVERSE -> context.drawTexture(bossBar.overlay(), (int) right + bossBar.right() - barLength, height,
-                        110, bossBar.right() - barLength, 0, barLength, bossBar.height(), bossBar.width(), bossBar.height());
+                case REVERSE -> context.drawTexture(overlay, (int) right + bossBar.right() - barLength, height, 110,
+                        bossBar.right() - barLength, 0, barLength, bossBar.height(), bossBar.width(), bossBar.height());
 
-                case DOUBLE -> context.drawTexture(bossBar.overlay(), (int) right + bossBar.left() + (bossBar.right() - bossBar.left() - barLength) / 2, height,
-                        110, bossBar.left() + (float) (bossBar.right() - bossBar.left() - barLength) / 2, 0,
+                case DOUBLE -> context.drawTexture(overlay, (int) right + bossBar.left() + (bossBar.right() - bossBar.left() - barLength) / 2, height, 110,
+                        bossBar.left() + (float) (bossBar.right() - bossBar.left() - barLength) / 2, 0,
                         barLength, bossBar.height(), bossBar.width(), bossBar.height());
 
                 case DOUBLE_REVERSE -> {
-                    context.drawTexture(bossBar.overlay(), (int) right + bossBar.left(), height,
-                            110, bossBar.left(), 0,
-                            barLength / 2 + 1, bossBar.height(), bossBar.width(), bossBar.height());
+                    context.drawTexture(overlay, (int) right + bossBar.left(), height, 110,
+                            bossBar.left(), 0, barLength / 2 + 1, bossBar.height(), bossBar.width(), bossBar.height());
 
-                    context.drawTexture(bossBar.overlay(), (int) (right + bossBar.left() + barHalf + (float) (bossBar.right() - bossBar.left() - barLength) / 2) + 1, height,
-                            110, bossBar.left() + barHalf + (float) (bossBar.right() - bossBar.left() - barLength) / 2 + 1, 0,
+                    context.drawTexture(overlay, (int) (right + bossBar.left() + barHalf + (float) (bossBar.right() - bossBar.left() - barLength) / 2) + 1, height, 110,
+                            bossBar.left() + barHalf + (float) (bossBar.right() - bossBar.left() - barLength) / 2 + 1, 0,
                             barLength / 2, bossBar.height(), bossBar.width(), bossBar.height());
                 }
             }
         }
         RenderSystem.disableBlend();
+    }
+
+    private float getTextureKey(List<Float> splits, float percent) {
+        for (Float split : splits) {
+            if (percent * 100 < split) return split;
+        }
+        return 100.0f;
     }
 
     private void renderDefaultBossBar(DrawContext context, int width, int height, BossBar bossBar) {
