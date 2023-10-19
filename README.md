@@ -8,7 +8,13 @@ This mod allows you to replace vanilla bossbars with highly customizable bossbar
 > type=<hotbar type, see below>  
 > name=<display name of the hotbar\>  
 > texture=<texture name without ".png">  
-> overlay=<overlay name without ".png">  
+> overlay=<overlay name without ".png">
+
+For example:  
+>type=normal  
+>name=Silver Construct  
+>texture=silver_construct_texture  
+>overlay=silver_construct_overlay 
   
 Bossbar types: 
   
@@ -39,4 +45,19 @@ For example:
 >texture.66.6=silver_construct_texture_2  
 >overlay.66.6=silver_construct_overlay_2  
 >texture.33.3=silver_construct_texture_3  
->overlay.33.3=silver_construct_overlay_3  
+>overlay.33.3=silver_construct_overlay_3
+  
+## Animated textures
+Bossbar texture could be animated in a way, similar to vanilla (stack all frames in one image).
+To show that a texture has multiple frames, add a line to your bossbar.
+><texture path property\>.frames=<frame duration in ticks for EACH frame\>
+
+  
+For example:  
+>type=double  
+>name=Silver Construct  
+>texture=silver_construct_texture  
+>overlay=silver_construct_overlay  
+>texture.frames=20,20
+  
+(silver_construct_texture has 2 frames)
