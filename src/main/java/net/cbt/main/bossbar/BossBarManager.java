@@ -11,12 +11,15 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.*;
+import java.util.stream.IntStream;
 
 public class BossBarManager {
 
     private final MinecraftClient client;
     final HashMap<String, CustomBossBar> customBossBars = new HashMap<>();
     Map<UUID, ClientBossBar> bossBars = Maps.newLinkedHashMap();
+
+    int renderTime = 0;
 
     private static final Identifier DEFAULT = new Identifier("textures/gui/bars.png");
 
@@ -33,7 +36,7 @@ public class BossBarManager {
         for (BossBar bossBar : this.bossBars.values()) {
             String name = bossBar.getName().getString();
             if (customBossBars.containsKey(name)) {
-                this.renderCustomBossBar(context, width, height, customBossBars.get(name), bossBar);
+                this.renderCustomBossBar(context, width, height, customBossBars.get(name), bossBar, renderTime);
                 height += customBossBars.get(name).height();
             }
             else {
@@ -43,51 +46,72 @@ public class BossBarManager {
         }
     }
 
-    private void renderCustomBossBar(DrawContext context, int width, int height, CustomBossBar bossBar, BossBar source) {
+    private void renderCustomBossBar(DrawContext context, int width, int height, CustomBossBar bossBar, BossBar source, long renderTime) {
 
         float right = (float) width / 2 - (float) bossBar.width() / 2;
         int barHalf = (bossBar.right() - bossBar.left()) / 2;
 
-        float phase = getTextureKey(bossBar.phases(), source.getPercent());
+        Float phase = getTextureKey(bossBar.phases(), source.getPercent());
+
         Identifier texture = bossBar.textures().get(phase);
         Identifier overlay = bossBar.overlays().get(phase);
+        int textureV = getFrameOffset(renderTime, bossBar.textureFrames(), bossBar.height(), phase);
+        int overlayV = getFrameOffset(renderTime, bossBar.overlayFrames(), bossBar.height(), phase);
+        int textureHeight = bossBar.textureFrames().get(phase) == null ? bossBar.height() :
+                bossBar.height() * bossBar.textureFrames().get(phase).length;
+        int overlayHeight = bossBar.overlayFrames().get(phase) == null ? bossBar.height() :
+                bossBar.height() * bossBar.overlayFrames().get(phase).length;
 
         RenderSystem.enableBlend();
         context.drawTexture(texture, (int) right, height, 100,
-                0, 0, bossBar.width(), bossBar.height(), bossBar.width(), bossBar.height());
+                0, textureV, bossBar.width(), bossBar.height(), bossBar.width(), textureHeight);
 
         int barLength = (int) (source.getPercent() * (float) (bossBar.right() - bossBar.left()));
 
         if (barLength > 0) {
             switch (bossBar.type()) {
                 case NORMAL -> context.drawTexture(overlay, (int) right + bossBar.left(), height, 110,
-                        bossBar.left(), 0, barLength, bossBar.height(), bossBar.width(), bossBar.height());
+                        bossBar.left(), overlayV, barLength, bossBar.height(), bossBar.width(), overlayHeight);
 
                 case REVERSE -> context.drawTexture(overlay, (int) right + bossBar.right() - barLength, height, 110,
-                        bossBar.right() - barLength, 0, barLength, bossBar.height(), bossBar.width(), bossBar.height());
+                        bossBar.right() - barLength, overlayV, barLength, bossBar.height(), bossBar.width(), overlayHeight);
 
                 case DOUBLE -> context.drawTexture(overlay, (int) right + bossBar.left() + (bossBar.right() - bossBar.left() - barLength) / 2, height, 110,
-                        bossBar.left() + (float) (bossBar.right() - bossBar.left() - barLength) / 2, 0,
-                        barLength, bossBar.height(), bossBar.width(), bossBar.height());
+                        bossBar.left() + (float) (bossBar.right() - bossBar.left() - barLength) / 2, overlayV,
+                        barLength, bossBar.height(), bossBar.width(), overlayHeight);
 
                 case DOUBLE_REVERSE -> {
                     context.drawTexture(overlay, (int) right + bossBar.left(), height, 110,
-                            bossBar.left(), 0, barLength / 2 + 1, bossBar.height(), bossBar.width(), bossBar.height());
+                            bossBar.left(), overlayV, barLength / 2 + 1, bossBar.height(), bossBar.width(), overlayHeight);
 
                     context.drawTexture(overlay, (int) (right + bossBar.left() + barHalf + (float) (bossBar.right() - bossBar.left() - barLength) / 2) + 1, height, 110,
-                            bossBar.left() + barHalf + (float) (bossBar.right() - bossBar.left() - barLength) / 2 + 1, 0,
-                            barLength / 2, bossBar.height(), bossBar.width(), bossBar.height());
+                            bossBar.left() + barHalf + (float) (bossBar.right() - bossBar.left() - barLength) / 2 + 1, overlayV,
+                            barLength / 2, bossBar.height(), bossBar.width(), overlayHeight);
                 }
             }
         }
         RenderSystem.disableBlend();
     }
 
-    private float getTextureKey(List<Float> splits, float percent) {
+    private float getTextureKey(List<Float> splits, Float percent) {
         for (Float split : splits) {
             if (percent * 100 < split) return split;
         }
         return 100.0f;
+    }
+
+    private int getFrameOffset(long renderTime, HashMap<Float, int[]> frames, int height, Float key) {
+        int[] timings = frames.get(key);
+        if (timings == null || timings.length == 0) return 0;
+
+        int progress = (int) renderTime % IntStream.of(timings).sum();
+        int counter = 0;
+
+        for (int i = 0; i < timings.length; i++) {
+            counter += timings[i];
+            if (counter > progress) return i * height;
+        }
+        return 0;
     }
 
     private void renderDefaultBossBar(DrawContext context, int width, int height, BossBar bossBar) {
@@ -122,6 +146,10 @@ public class BossBarManager {
 
     public void setBossBars(BossBarHud source) {
         this.bossBars = source.bossBars;
+    }
+
+    public void tick() {
+        this.renderTime++;
     }
 
     public enum Type {
