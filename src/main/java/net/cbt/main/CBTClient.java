@@ -57,9 +57,9 @@ public class CBTClient implements ClientModInitializer {
 
         resourceManager.findResources("cbt", id -> id.getPath().endsWith(".bossbar")).keySet().forEach(id -> {
             HashMap<String, String> properties = new HashMap<>();
-            List<Float> splits = new ArrayList<>();
             HashMap<Float, int[]> textureFrames = new HashMap<>();
             HashMap<Float, int[]> overlayFrames = new HashMap<>();
+            List<Float> splits = new ArrayList<>();
 
             try {
                 String line;
@@ -124,11 +124,12 @@ public class CBTClient implements ClientModInitializer {
         HashMap<Float, Identifier> textures = Maps.newLinkedHashMap();
         HashMap<Float, Identifier> overlays = Maps.newLinkedHashMap();
 
+        BossBarManager.Type type = BossBarManager.Type.NORMAL;
         try {
-            BossBarManager.Type.valueOf(properties.get("type").toUpperCase());
+            type = BossBarManager.Type.valueOf(properties.get("type").toUpperCase().replace(" ", ""));
         } catch (IllegalArgumentException e) {
-            CBTClient.LOGGER.error("Bossbar properties file " + id + "should specify a valid bossbar type.");
-            return null;
+            CBTClient.LOGGER.error("Bossbar properties file " + id + "does not contain a valid bossbar type. " +
+                    "Using NORMAL type.");
         }
 
         if (!properties.containsKey("name")) {
@@ -187,8 +188,7 @@ public class CBTClient implements ClientModInitializer {
         }
 
         return new CustomBossBar(
-                BossBarManager.Type.valueOf(properties.get("type").toUpperCase()),
-                properties.get("name"), splits,
+                type, properties.get("name"), splits,
                 textures, textureFrames,
                 overlays, overlayFrames,
                 width, height, left, right);
@@ -197,7 +197,6 @@ public class CBTClient implements ClientModInitializer {
     public static void sendBuildMessage(List<Float> splits, HashMap<String, String> properties, Identifier id,
                                         HashMap<Float, int[]> textureFrames, HashMap<Float, int[]> overlayFrames,
                                         int width, int height, int left, int right) {
-        StringBuilder splitsLine = new StringBuilder();
         StringBuilder texturesLine = new StringBuilder();
         StringBuilder overlaysLine = new StringBuilder();
         StringBuilder textureFramesLine = new StringBuilder();
@@ -208,13 +207,13 @@ public class CBTClient implements ClientModInitializer {
             overlaysLine.append("\nOverlay: ").append(new Identifier("minecraft", properties.get("overlay")));
         }
         else {
-            splitsLine.append("\nSplits: ");
             texturesLine.append("\nTextures: ");
             overlaysLine.append("\nOverlays: ");
             for (Float split : splits) {
-                splitsLine.append(split).append(", ");
-                texturesLine.append(new Identifier("minecraft", properties.get("texture." + split))).append(", ");
-                overlaysLine.append(new Identifier("minecraft", properties.get("overlay." + split))).append(", ");
+                texturesLine.append(split).append(": ")
+                        .append(new Identifier("minecraft", properties.get("texture." + split))).append(", ");
+                overlaysLine.append(split).append(": ")
+                        .append(new Identifier("minecraft", properties.get("overlay." + split))).append(", ");
             }
         }
 
@@ -230,7 +229,6 @@ public class CBTClient implements ClientModInitializer {
         LOGGER.info("Building bossbar: " + id.toString() +
                 "\nType: " + BossBarManager.Type.valueOf(properties.get("type").toUpperCase()) +
                 "\nDisplay name: " + properties.get("name") +
-                splitsLine +
                 texturesLine +
                 overlaysLine +
                 textureFramesLine +

@@ -21,6 +21,16 @@ public class BossBarManager {
 
     int renderTime = 0;
 
+    HashMap<UUID, Float> bossBarStatuses = Maps.newLinkedHashMap();
+    HashMap<UUID, Boolean> alwaysUpdate = Maps.newLinkedHashMap();
+
+    HashMap<UUID, Identifier> activeTextures = Maps.newLinkedHashMap();
+    HashMap<UUID, Identifier> activeOverlays = Maps.newLinkedHashMap();
+    HashMap<UUID, Integer> textureOffsets = Maps.newLinkedHashMap();
+    HashMap<UUID, Integer> overlayOffsets = Maps.newLinkedHashMap();
+    HashMap<UUID, Integer> textureHeights = Maps.newLinkedHashMap();
+    HashMap<UUID, Integer> overlayHeights = Maps.newLinkedHashMap();
+
     private static final Identifier DEFAULT = new Identifier("textures/gui/bars.png");
 
     public BossBarManager(MinecraftClient client) {
@@ -29,6 +39,7 @@ public class BossBarManager {
 
     public void render(DrawContext context) {
         if (this.bossBars.isEmpty()) {
+            clearActiveTextures();
             return;
         }
         int width = context.getScaledWindowWidth();
@@ -36,7 +47,7 @@ public class BossBarManager {
         for (BossBar bossBar : this.bossBars.values()) {
             String name = bossBar.getName().getString();
             if (customBossBars.containsKey(name)) {
-                this.renderCustomBossBar(context, width, height, customBossBars.get(name), bossBar, renderTime);
+                this.renderCustomBossBar(context, width, height, customBossBars.get(name), bossBar);
                 height += customBossBars.get(name).height();
             }
             else {
@@ -46,21 +57,21 @@ public class BossBarManager {
         }
     }
 
-    private void renderCustomBossBar(DrawContext context, int width, int height, CustomBossBar bossBar, BossBar source, long renderTime) {
-
+    private void renderCustomBossBar(DrawContext context, int width, int height, CustomBossBar bossBar, BossBar source) {
         float right = (float) width / 2 - (float) bossBar.width() / 2;
         int barHalf = (bossBar.right() - bossBar.left()) / 2;
+        UUID uuid = source.getUuid();
 
-        Float phase = getTextureKey(bossBar.phases(), source.getPercent());
+        if (bossBarStatuses.get(uuid) == null || alwaysUpdate.get(uuid) || bossBarStatuses.get(uuid) != source.getPercent()) {
+            updateActiveTextures(bossBar, uuid, source.getPercent());
+        }
 
-        Identifier texture = bossBar.textures().get(phase);
-        Identifier overlay = bossBar.overlays().get(phase);
-        int textureV = getFrameOffset(renderTime, bossBar.textureFrames(), bossBar.height(), phase);
-        int overlayV = getFrameOffset(renderTime, bossBar.overlayFrames(), bossBar.height(), phase);
-        int textureHeight = bossBar.textureFrames().get(phase) == null ? bossBar.height() :
-                bossBar.height() * bossBar.textureFrames().get(phase).length;
-        int overlayHeight = bossBar.overlayFrames().get(phase) == null ? bossBar.height() :
-                bossBar.height() * bossBar.overlayFrames().get(phase).length;
+        Identifier texture = activeTextures.get(uuid);
+        Identifier overlay = activeOverlays.get(uuid);
+        int textureV = textureOffsets.get(uuid);
+        int overlayV = overlayOffsets.get(uuid);
+        int textureHeight = textureHeights.get(uuid);
+        int overlayHeight = overlayHeights.get(uuid);
 
         RenderSystem.enableBlend();
         context.drawTexture(texture, (int) right, height, 100,
@@ -91,6 +102,38 @@ public class BossBarManager {
             }
         }
         RenderSystem.disableBlend();
+    }
+
+    private void updateActiveTextures(CustomBossBar bossBar, UUID uuid, float progress) {
+        Float phase = getTextureKey(bossBar.phases(), progress);
+        bossBarStatuses.put(uuid, progress);
+
+        activeTextures.put(uuid, bossBar.textures().get(phase));
+        activeOverlays.put(uuid, bossBar.overlays().get(phase));
+
+        textureOffsets.put(uuid, getFrameOffset(renderTime, bossBar.textureFrames(), bossBar.height(), phase));
+        overlayOffsets.put(uuid, getFrameOffset(renderTime, bossBar.overlayFrames(), bossBar.height(), phase));
+
+        textureHeights.put(uuid, bossBar.textureFrames().get(phase) == null ? bossBar.height() :
+                bossBar.height() * bossBar.textureFrames().get(phase).length);
+        overlayHeights.put(uuid, bossBar.overlayFrames().get(phase) == null ? bossBar.height() :
+                bossBar.height() * bossBar.overlayFrames().get(phase).length);
+
+        if (alwaysUpdate.containsKey(uuid)) return;
+
+        alwaysUpdate.put(uuid, !bossBar.textureFrames().isEmpty() && !bossBar.overlayFrames().isEmpty());
+    }
+
+    private void clearActiveTextures() {
+        bossBarStatuses.clear();
+        alwaysUpdate.clear();
+
+        activeTextures.clear();
+        activeOverlays.clear();
+        textureOffsets.clear();
+        overlayOffsets.clear();
+        textureHeights.clear();
+        overlayHeights.clear();
     }
 
     private float getTextureKey(List<Float> splits, Float percent) {
@@ -135,7 +178,8 @@ public class BossBarManager {
     }
 
     public void clear() {
-        this.customBossBars.clear();
+        clearActiveTextures();
+        customBossBars.clear();
     }
 
     public void setCustomBossBars(ArrayList<CustomBossBar> source) {
@@ -146,6 +190,7 @@ public class BossBarManager {
 
     public void setBossBars(BossBarHud source) {
         this.bossBars = source.bossBars;
+
     }
 
     public void tick() {
