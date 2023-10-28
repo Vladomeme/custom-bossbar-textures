@@ -4,10 +4,10 @@ import net.cbt.main.CBTClient;
 import net.cbt.main.CBTConfig;
 import net.cbt.main.bossbar.BossBarManager;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.BossBarHud;
 import net.minecraft.client.gui.hud.InGameHud;
 import net.minecraft.client.render.item.ItemRenderer;
+import net.minecraft.client.util.math.MatrixStack;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -30,13 +30,13 @@ public class InGameHudMixin {
 	}
 
 	@Redirect(method = "render", at = @At(value = "INVOKE",
-			target = "Lnet/minecraft/client/gui/hud/BossBarHud;render(Lnet/minecraft/client/gui/DrawContext;)V"))
-	private void render(BossBarHud instance, DrawContext context) {
+			target = "Lnet/minecraft/client/gui/hud/BossBarHud;render(Lnet/minecraft/client/util/math/MatrixStack;)V"))
+	private void render(BossBarHud instance, MatrixStack matrices) {
 		if (!CBTConfig.INSTANCE.enabled) {
-			this.bossBarHud.render(context);
+			this.bossBarHud.render(matrices);
 			return;
 		}
 		CBTClient.bossbarManager.setBossBars(instance);
-		CBTClient.bossbarManager.render(context);
+		CBTClient.bossbarManager.render(matrices);
 	}
 }

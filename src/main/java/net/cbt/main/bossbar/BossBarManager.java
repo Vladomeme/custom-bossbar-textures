@@ -3,9 +3,10 @@ package net.cbt.main.bossbar;
 import com.google.common.collect.Maps;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.gui.hud.BossBarHud;
 import net.minecraft.client.gui.hud.ClientBossBar;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.boss.BossBar;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -30,27 +31,27 @@ public class BossBarManager {
         this.client = client;
     }
 
-    public void render(DrawContext context) {
+    public void render(MatrixStack matrices) {
         if (this.bossBars.isEmpty()) {
             clearActiveTextures();
             return;
         }
-        int width = context.getScaledWindowWidth();
+        int width = MinecraftClient.getInstance().getWindow().getScaledWidth();
         int height = 12;
         for (BossBar bossBar : this.bossBars.values()) {
             String name = bossBar.getName().getString();
             if (customBossBars.containsKey(name)) {
-                this.renderCustomBossBar(context, width, height, customBossBars.get(name), bossBar);
+                this.renderCustomBossBar(matrices, width, height, customBossBars.get(name), bossBar);
                 height += 5 + customBossBars.get(name).height();
             }
             else {
-                this.renderDefaultBossBar(context, width, height, bossBar);
+                this.renderDefaultBossBar(matrices, width, height, bossBar);
                 height += 10 + this.client.textRenderer.fontHeight;
             }
         }
     }
 
-    private void renderCustomBossBar(DrawContext context, int width, int height, CustomBossBar bossBar, BossBar source) {
+    private void renderCustomBossBar(MatrixStack matrices, int width, int height, CustomBossBar bossBar, BossBar source) {
         float right = (float) width / 2 - (float) bossBar.width() / 2;
         int barHalf = (bossBar.right() - bossBar.left()) / 2;
         UUID uuid = source.getUuid();
@@ -67,28 +68,30 @@ public class BossBarManager {
         int overlayHeight = activeBossBars.get(uuid).overlayHeight();
 
         RenderSystem.enableBlend();
-        context.drawTexture(texture, (int) right, height, 100,
+        RenderSystem.setShaderTexture(0, texture);
+        DrawableHelper.drawTexture(matrices, (int) right, height, 100,
                 0, textureV, bossBar.width(), bossBar.height(), bossBar.width(), textureHeight);
 
         int barLength = (int) (source.getPercent() * (float) (bossBar.right() - bossBar.left()));
 
         if (barLength > 0) {
+            RenderSystem.setShaderTexture(0, overlay);
             switch (bossBar.type()) {
-                case NORMAL -> context.drawTexture(overlay, (int) right + bossBar.left(), height, 110,
+                case NORMAL -> DrawableHelper.drawTexture(matrices, (int) right + bossBar.left(), height, 110,
                         bossBar.left(), overlayV, barLength, bossBar.height(), bossBar.width(), overlayHeight);
 
-                case REVERSE -> context.drawTexture(overlay, (int) right + bossBar.right() - barLength, height, 110,
+                case REVERSE -> DrawableHelper.drawTexture(matrices, (int) right + bossBar.right() - barLength, height, 110,
                         bossBar.right() - barLength, overlayV, barLength, bossBar.height(), bossBar.width(), overlayHeight);
 
-                case DOUBLE -> context.drawTexture(overlay, (int) right + bossBar.left() + (bossBar.right() - bossBar.left() - barLength) / 2, height, 110,
+                case DOUBLE -> DrawableHelper.drawTexture(matrices, (int) right + bossBar.left() + (bossBar.right() - bossBar.left() - barLength) / 2, height, 110,
                         bossBar.left() + (float) (bossBar.right() - bossBar.left() - barLength) / 2, overlayV,
                         barLength, bossBar.height(), bossBar.width(), overlayHeight);
 
                 case DOUBLE_REVERSE -> {
-                    context.drawTexture(overlay, (int) right + bossBar.left(), height, 110,
+                    DrawableHelper.drawTexture(matrices, (int) right + bossBar.left(), height, 110,
                             bossBar.left(), overlayV, barLength / 2 + 1, bossBar.height(), bossBar.width(), overlayHeight);
 
-                    context.drawTexture(overlay, (int) (right + bossBar.left() + barHalf + (float) (bossBar.right() - bossBar.left() - barLength) / 2) + 1, height, 110,
+                    DrawableHelper.drawTexture(matrices, (int) (right + bossBar.left() + barHalf + (float) (bossBar.right() - bossBar.left() - barLength) / 2) + 1, height, 110,
                             bossBar.left() + barHalf + (float) (bossBar.right() - bossBar.left() - barLength) / 2 + 1, overlayV,
                             barLength / 2, bossBar.height(), bossBar.width(), overlayHeight);
                 }
@@ -154,22 +157,23 @@ public class BossBarManager {
         return 0;
     }
 
-    private void renderDefaultBossBar(DrawContext context, int width, int height, BossBar bossBar) {
-        this.renderDefaultBossBar(context, width / 2 - 91, height, bossBar, 182, 0);
+    private void renderDefaultBossBar(MatrixStack matrices, int width, int height, BossBar bossBar) {
+        this.renderDefaultBossBar(matrices, width / 2 - 91, height, bossBar, 182, 0);
         int progress = (int) (bossBar.getPercent() * 183.0f);
         if (progress > 0) {
-            this.renderDefaultBossBar(context, width / 2 - 91, height, bossBar, progress, 5);
+            this.renderDefaultBossBar(matrices, width / 2 - 91, height, bossBar, progress, 5);
         }
         Text text = bossBar.getName();
         int textWidth = this.client.textRenderer.getWidth(text);
-        context.drawTextWithShadow(this.client.textRenderer, text, width / 2 - textWidth / 2, height - 9, 0xFFFFFF);
+        MinecraftClient.getInstance().textRenderer.drawWithShadow(matrices, text, (float) (width / 2 - textWidth / 2), height - 9, 0xFFFFFF);
     }
 
-    private void renderDefaultBossBar(DrawContext context, int x, int y, BossBar bossBar, int width, int height) {
-        context.drawTexture(DEFAULT, x, y, 0, bossBar.getColor().ordinal() * 5 * 2 + height, width, 5);
+    private void renderDefaultBossBar(MatrixStack matrices, int x, int y, BossBar bossBar, int width, int height) {
+        RenderSystem.setShaderTexture(0, DEFAULT);
+        DrawableHelper.drawTexture(matrices, x, y, 0, bossBar.getColor().ordinal() * 5 * 2 + height, width, 5);
         if (bossBar.getStyle() != BossBar.Style.PROGRESS) {
             RenderSystem.enableBlend();
-            context.drawTexture(DEFAULT, x, y, 0, 80 + (bossBar.getStyle().ordinal() - 1) * 5 * 2 + height, width, 5);
+            DrawableHelper.drawTexture(matrices, x, y, 0, 80 + (bossBar.getStyle().ordinal() - 1) * 5 * 2 + height, width, 5);
             RenderSystem.disableBlend();
         }
     }
