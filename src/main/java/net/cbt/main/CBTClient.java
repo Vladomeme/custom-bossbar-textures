@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 @Environment(EnvType.CLIENT)
@@ -142,19 +143,42 @@ public class CBTClient implements ClientModInitializer {
             return null;
         }
         else {
+            float fallback;
             for (Float percent : splits) {
-                if (MinecraftClient.getInstance().getResourceManager().getResource(
-                        new Identifier("minecraft", properties.get("texture." + percent))).isEmpty()) {
-                    LOGGER.error("Texture path for " + percent + "% HP is invalid in file: " + id);
-                    return null;
+                try {
+                    if (MinecraftClient.getInstance().getResourceManager().getResource(
+                            new Identifier("minecraft", properties.get("texture." + percent))).isEmpty()) {
+                        LOGGER.error("Texture path for " + percent + "% HP is invalid in file: " + id);
+                        return null;
+                    }
+                    textures.put(percent, new Identifier("minecraft", properties.get("texture." + percent)));
+                } catch (CompletionException | NullPointerException e) {
+                    LOGGER.warn("Bossbar file has no texture path for " + percent + "% HP: " + id);
+                    fallback = getFallbackSplit(splits, percent);
+                    if (fallback == -1.0f) {
+                        LOGGER.error("Unable to find a fallback texture. Skipping bossbar " + id);
+                        return null;
+                    }
+                    LOGGER.warn("Using a fallback texture (" + fallback + ")");
+                    textures.put(percent, new Identifier("minecraft", properties.get("texture." + fallback)));
                 }
-                else textures.put(percent, new Identifier("minecraft", properties.get("texture." + percent)));
-                if (MinecraftClient.getInstance().getResourceManager().getResource(
-                        new Identifier("minecraft", properties.get("overlay." + percent))).isEmpty()) {
-                    LOGGER.error("Overlay path for " + percent + "% HP is invalid in file: " + id);
-                    return null;
+                try {
+                    if (MinecraftClient.getInstance().getResourceManager().getResource(
+                            new Identifier("minecraft", properties.get("overlay." + percent))).isEmpty()) {
+                        LOGGER.error("Overlay path for " + percent + "% HP is invalid in file: " + id);
+                        return null;
+                    }
+                    overlays.put(percent, new Identifier("minecraft", properties.get("overlay." + percent)));
+                } catch (CompletionException | NullPointerException e) {
+                    LOGGER.warn("Bossbar file has no overlay path for " + percent + "% HP: " + id);
+                    fallback = getFallbackSplit(splits, percent);
+                    if (fallback == -1.0f) {
+                        LOGGER.error("Unable to find a fallback overlay. Skipping bossbar " + id);
+                        return null;
+                    }
+                    LOGGER.warn("Using a fallback overlay (" + fallback + ")");
+                    overlays.put(percent, new Identifier("minecraft", properties.get("overlay." + fallback)));
                 }
-                else overlays.put(percent, new Identifier("minecraft", properties.get("overlay." + percent)));
             }
         }
 
@@ -194,6 +218,13 @@ public class CBTClient implements ClientModInitializer {
                 width, height, left, right);
     }
 
+    private static float getFallbackSplit(List<Float> splits, Float percent) {
+        for (Float option : splits) {
+            if (percent < option) return option;
+        }
+        return -1.0f;
+    }
+
     public static void sendBuildMessage(List<Float> splits, HashMap<String, String> properties, Identifier id,
                                         HashMap<Float, int[]> textureFrames, HashMap<Float, int[]> overlayFrames,
                                         int width, int height, int left, int right) {
@@ -210,10 +241,14 @@ public class CBTClient implements ClientModInitializer {
             texturesLine.append("\nTextures: ");
             overlaysLine.append("\nOverlays: ");
             for (Float split : splits) {
-                texturesLine.append(split).append(": ")
-                        .append(new Identifier("minecraft", properties.get("texture." + split))).append(", ");
-                overlaysLine.append(split).append(": ")
-                        .append(new Identifier("minecraft", properties.get("overlay." + split))).append(", ");
+                try {
+                    texturesLine.append(split).append(": ")
+                            .append(new Identifier("minecraft", properties.get("texture." + split))).append(", ");
+                    overlaysLine.append(split).append(": ")
+                            .append(new Identifier("minecraft", properties.get("overlay." + split))).append(", ");
+                } catch (CompletionException | NullPointerException e) {
+                    //don't care
+                }
             }
         }
 

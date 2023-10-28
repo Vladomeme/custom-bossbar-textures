@@ -35,7 +35,9 @@ Bossbar types:
 ## Phase texture changes
 You can change the bossbar texture depending on how much health is left. For that add these lines to your `.bossbar` file.
 >texture.<%HP left>=<texture name without ".png">  
->overlay.<%HP left>=<overlay name without ".png">
+>overlay.<%HP left>=<overlay name without ".png">  
+
+If you don't include both texture and overlay paths for the same % HP, mod will try to find a fallback texture, but I don't recommend relying on that. 
   
 For example:  
 >type=normal  
