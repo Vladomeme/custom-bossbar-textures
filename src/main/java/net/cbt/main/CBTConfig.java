@@ -13,7 +13,7 @@ import java.io.Reader;
 public class CBTConfig {
 
     public boolean enabled = true;
-    public boolean debug = false;
+    public boolean debug = true;
 
     private static final File FILE = new File(FabricLoader.getInstance().getConfigDir().toFile(), "cbt.json");
 

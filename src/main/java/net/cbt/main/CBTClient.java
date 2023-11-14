@@ -137,6 +137,15 @@ public class CBTClient implements ClientModInitializer {
             CBTClient.LOGGER.error("Bossbar properties file " + id + "should specify bossbar display name.");
             return null;
         }
+        if (type == BossBarManager.Type.HIDDEN) {
+            if (CBTConfig.INSTANCE.debug) {
+                sendBuildMessage(properties, id);
+            }
+
+            return new CustomBossBar(
+                    type, properties.get("name"), null, null, null,
+                    null, null, 0, 0, 0, 0);
+        }
 
         if (splits.isEmpty()) {
             LOGGER.error("Texture path doesn't exist or invalid in file: " + id);
@@ -270,5 +279,11 @@ public class CBTClient implements ClientModInitializer {
                 overlayFramesLine +
                 "\nTexture width = " + width + ", height = " + height +
                 "\nOverlay borders: left = " + left + ", right = " + right);
+    }
+
+    public static void sendBuildMessage(HashMap<String, String> properties, Identifier id) {
+        LOGGER.info("Building bossbar: " + id.toString() +
+                "\nType: " + BossBarManager.Type.valueOf(properties.get("type").toUpperCase()) +
+                "\nDisplay name: " + properties.get("name"));
     }
 }

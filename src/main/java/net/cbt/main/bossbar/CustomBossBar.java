@@ -11,4 +11,7 @@ public record CustomBossBar(BossBarManager.Type type, String name, List<Float> p
                             HashMap<Float, Identifier> overlays, HashMap<Float, int[]> overlayFrames,
                             int width, int height, int left, int right) {
 
+    public CustomBossBar withName(String name) {
+        return new CustomBossBar(type, name, phases, textures, textureFrames, overlays, overlayFrames, width, height, left, right);
+    }
 }

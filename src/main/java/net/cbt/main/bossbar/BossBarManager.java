@@ -18,6 +18,7 @@ public class BossBarManager {
     private final MinecraftClient client;
     final HashMap<String, CustomBossBar> customBossBars = new HashMap<>();
     Map<UUID, ClientBossBar> bossBars = Maps.newLinkedHashMap();
+    List<String> regexKeys = new ArrayList<>();
 
     int renderTime = 0;
 
@@ -37,16 +38,25 @@ public class BossBarManager {
         }
         int width = context.getScaledWindowWidth();
         int height = 12;
+        loop:
         for (BossBar bossBar : this.bossBars.values()) {
             String name = bossBar.getName().getString();
             if (customBossBars.containsKey(name)) {
+                if (customBossBars.get(name).type() == Type.HIDDEN) continue;
                 this.renderCustomBossBar(context, width, height, customBossBars.get(name), bossBar);
                 height += 5 + customBossBars.get(name).height();
+                continue;
             }
-            else {
-                this.renderDefaultBossBar(context, width, height, bossBar);
-                height += 10 + this.client.textRenderer.fontHeight;
+            for (String key : regexKeys) {
+                if (name.matches(key)) {
+                    if (customBossBars.get(key).type() == Type.HIDDEN) continue loop;
+                    this.renderCustomBossBar(context, width, height, customBossBars.get(key), bossBar);
+                    height += 5 + customBossBars.get(key).height();
+                    continue loop;
+                }
             }
+            this.renderDefaultBossBar(context, width, height, bossBar);
+            height += 10 + this.client.textRenderer.fontHeight;
         }
     }
 
@@ -177,10 +187,17 @@ public class BossBarManager {
     public void clear() {
         clearActiveTextures();
         customBossBars.clear();
+        regexKeys.clear();
     }
 
     public void setCustomBossBars(ArrayList<CustomBossBar> source) {
         for (CustomBossBar bossBar : source) {
+            if (bossBar.name().startsWith("regex")) {
+                String name = bossBar.name().replace("regex:", "");
+                this.customBossBars.put(name, bossBar.withName(name));
+                this.regexKeys.add(name);
+                continue;
+            }
             this.customBossBars.put(bossBar.name(), bossBar);
         }
     }
@@ -198,6 +215,7 @@ public class BossBarManager {
         NORMAL,
         REVERSE,
         DOUBLE,
-        DOUBLE_REVERSE
+        DOUBLE_REVERSE,
+        HIDDEN
     }
 }
