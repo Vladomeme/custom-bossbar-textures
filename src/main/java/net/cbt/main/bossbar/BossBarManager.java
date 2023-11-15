@@ -2,6 +2,7 @@ package net.cbt.main.bossbar;
 
 import com.google.common.collect.Maps;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.cbt.main.events.EventManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.BossBarHud;
@@ -16,13 +17,16 @@ import java.util.stream.IntStream;
 public class BossBarManager {
 
     private final MinecraftClient client;
-    final HashMap<String, CustomBossBar> customBossBars = new HashMap<>();
-    Map<UUID, ClientBossBar> bossBars = Maps.newLinkedHashMap();
+    private EventManager eventManager;
+    public final HashMap<String, CustomBossBar> customBossBars = new HashMap<>();
+    public Map<UUID, ClientBossBar> bossBars = Maps.newLinkedHashMap();
     List<String> regexKeys = new ArrayList<>();
 
-    int renderTime = 0;
+    public int renderTime = 0;
+    public DrawContext context;
 
     HashMap<UUID, ActiveBossBar> activeBossBars = Maps.newLinkedHashMap();
+    public HashMap<String, Integer> bossBarHeights = Maps.newLinkedHashMap();
     HashMap<UUID, Boolean> alwaysUpdate = Maps.newLinkedHashMap();
 
     private static final Identifier DEFAULT = new Identifier("textures/gui/bars.png");
@@ -36,6 +40,7 @@ public class BossBarManager {
             clearActiveTextures();
             return;
         }
+        bossBarHeights.clear();
         int width = context.getScaledWindowWidth();
         int height = 12;
         loop:
@@ -44,6 +49,7 @@ public class BossBarManager {
             if (customBossBars.containsKey(name)) {
                 if (customBossBars.get(name).type() == Type.HIDDEN) continue;
                 this.renderCustomBossBar(context, width, height, customBossBars.get(name), bossBar);
+                bossBarHeights.put(name, height);
                 height += 5 + customBossBars.get(name).height();
                 continue;
             }
@@ -51,19 +57,27 @@ public class BossBarManager {
                 if (name.matches(key)) {
                     if (customBossBars.get(key).type() == Type.HIDDEN) continue loop;
                     this.renderCustomBossBar(context, width, height, customBossBars.get(key), bossBar);
+                    bossBarHeights.put(name, height);
                     height += 5 + customBossBars.get(key).height();
                     continue loop;
                 }
             }
             this.renderDefaultBossBar(context, width, height, bossBar);
+            bossBarHeights.put(name, height);
             height += 10 + this.client.textRenderer.fontHeight;
         }
+        eventManager.tick();
+        this.context = context;
     }
 
     private void renderCustomBossBar(DrawContext context, int width, int height, CustomBossBar bossBar, BossBar source) {
         float right = (float) width / 2 - (float) bossBar.width() / 2;
         int barHalf = (bossBar.right() - bossBar.left()) / 2;
         UUID uuid = source.getUuid();
+
+        if (activeBossBars.get(uuid).progress() != source.getPercent()) {
+            eventManager.phaseCondition(uuid, activeBossBars.get(uuid).progress(), source.getPercent());
+        }
 
         if (activeBossBars.get(uuid) == null || alwaysUpdate.get(uuid) || activeBossBars.get(uuid).progress() != source.getPercent()) {
             updateActiveTextures(bossBar, uuid, source.getPercent());
@@ -204,6 +218,11 @@ public class BossBarManager {
 
     public void setBossBars(BossBarHud source) {
         this.bossBars = source.bossBars;
+
+    }
+
+    public void setEventManager(EventManager manager) {
+        this.eventManager = manager;
 
     }
 

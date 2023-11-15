@@ -3,9 +3,12 @@ package net.cbt.main;
 import com.google.common.collect.Maps;
 import net.cbt.main.bossbar.CustomBossBar;
 import net.cbt.main.bossbar.BossBarManager;
+import net.cbt.main.events.EventManager;
+import net.cbt.main.mixin.CBTTransmitter;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.minecraft.client.MinecraftClient;
@@ -29,10 +32,13 @@ public class CBTClient implements ClientModInitializer {
 
     public static final Logger LOGGER = LoggerFactory.getLogger("cbt");
 
-    public static BossBarManager bossbarManager;
+    public BossBarManager bossbarManager;
+    public EventManager eventManager;
 
     @Override
     public void onInitializeClient() {
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> this.bossbarManager.tick());
 
         ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(new SimpleSynchronousResourceReloadListener() {
 
@@ -47,12 +53,16 @@ public class CBTClient implements ClientModInitializer {
             }
         });
 
+        ((CBTTransmitter) MinecraftClient.getInstance().inGameHud).cbt$setClient(this);
+        ((CBTTransmitter) MinecraftClient.getInstance().inGameHud.getChatHud()).cbt$setClient(this);
+
         LOGGER.info("Loading Custom Bossbar Textures, truly monumentous.");
     }
 
-    public static void findBossbars(ResourceManager resourceManager) {
+    public void findBossbars(ResourceManager resourceManager) {
 
         bossbarManager.clear();
+        eventManager.clear();
 
         ArrayList<CustomBossBar> bossbars = new ArrayList<>();
 
@@ -115,7 +125,7 @@ public class CBTClient implements ClientModInitializer {
         bossbarManager.setCustomBossBars(bossbars);
     }
 
-    public static CustomBossBar buildBossbar(HashMap<String, String> properties, List<Float> splits,
+    public CustomBossBar buildBossbar(HashMap<String, String> properties, List<Float> splits,
                                              HashMap<Float, int[]> textureFrames, HashMap<Float, int[]> overlayFrames, Identifier id) {
         int width;
         int height;
@@ -227,14 +237,14 @@ public class CBTClient implements ClientModInitializer {
                 width, height, left, right);
     }
 
-    private static float getFallbackSplit(List<Float> splits, Float percent) {
+    private float getFallbackSplit(List<Float> splits, Float percent) {
         for (Float option : splits) {
             if (percent < option) return option;
         }
         return -1.0f;
     }
 
-    public static void sendBuildMessage(List<Float> splits, HashMap<String, String> properties, Identifier id,
+    public void sendBuildMessage(List<Float> splits, HashMap<String, String> properties, Identifier id,
                                         HashMap<Float, int[]> textureFrames, HashMap<Float, int[]> overlayFrames,
                                         int width, int height, int left, int right) {
         StringBuilder texturesLine = new StringBuilder();
@@ -281,7 +291,7 @@ public class CBTClient implements ClientModInitializer {
                 "\nOverlay borders: left = " + left + ", right = " + right);
     }
 
-    public static void sendBuildMessage(HashMap<String, String> properties, Identifier id) {
+    public void sendBuildMessage(HashMap<String, String> properties, Identifier id) {
         LOGGER.info("Building bossbar: " + id.toString() +
                 "\nType: " + BossBarManager.Type.valueOf(properties.get("type").toUpperCase()) +
                 "\nDisplay name: " + properties.get("name"));
