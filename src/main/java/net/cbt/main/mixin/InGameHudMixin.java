@@ -31,7 +31,7 @@ public class InGameHudMixin implements CBTTransmitter {
 	private void init(MinecraftClient client, ItemRenderer itemRenderer, CallbackInfo ci) {
 		if (CBTConfig.INSTANCE.enabled) {
 			cbtClient.bossbarManager = new BossBarManager(client);
-			cbtClient.eventManager = new EventManager(cbtClient);
+			cbtClient.eventManager = new EventManager(cbtClient.bossbarManager);
 			cbtClient.bossbarManager.setEventManager(cbtClient.eventManager);
 		}
 	}

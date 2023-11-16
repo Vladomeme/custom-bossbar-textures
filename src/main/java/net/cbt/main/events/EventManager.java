@@ -1,59 +1,51 @@
 package net.cbt.main.events;
 
-import com.google.common.collect.Maps;
-import net.cbt.main.CBTClient;
+import net.cbt.main.bossbar.BossBarManager;
+import net.cbt.main.bossbar.CustomBossBar;
 import net.minecraft.text.Text;
 
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
 public class EventManager {
 
-    CBTClient client;
+    BossBarManager manager;
 
-    HashMap<UUID, BossBarEvent> chatEvents = Maps.newLinkedHashMap();
-    HashMap<UUID, BossBarEvent> phaseEvents = Maps.newLinkedHashMap();
-    HashMap<UUID, BossBarEvent> addEvents = Maps.newLinkedHashMap();
-    HashMap<UUID, BossBarEvent> removeEvents = Maps.newLinkedHashMap();
+    public List<BossBarEvent> chatEvents = new ArrayList<>();
+    public List<BossBarEvent> addEvents = new ArrayList<>();
+    public List<BossBarEvent> removeEvents = new ArrayList<>();
 
-    public EventManager(CBTClient client) {
-        this.client = client;
+    public EventManager(BossBarManager manager) {
+        this.manager = manager;
     }
 
-    public void tick() {
-        for (BossBarEvent event : chatEvents.values()) {
-            event.tick(client);
-        }
-        for (BossBarEvent event : phaseEvents.values()) {
-            event.tick(client);
-        }
-        for (BossBarEvent event : addEvents.values()) {
-            event.tick(client);
-        }
-        for (BossBarEvent event : removeEvents.values()) {
-            event.tick(client);
+    public void tick(CustomBossBar source, int height) {
+        for (BossBarEvent event : source.events()) {
+            event.tick(manager, source, height);
         }
     }
 
     public void chatCondition(Text text) {
         String message = text.getString();
-        for (BossBarEvent event : chatEvents.values()) {
+        for (BossBarEvent event : chatEvents) {
             if (event.condition.equals(message)) {
                 event.trigger();
             }
         }
     }
 
-    public void phaseCondition(UUID uuid, float prevProgress, float progress) {
-        float condition = (float) phaseEvents.get(uuid).condition;
-        if (progress <= condition && condition < prevProgress) {
-            phaseEvents.get(uuid).trigger();
+    public void phaseCondition(CustomBossBar source, float prevProgress, float progress) {
+        for (BossBarEvent event : source.events()) {
+            float condition = (float) event.condition;
+            if (progress <= condition && condition < prevProgress) {
+                event.trigger();
+            }
         }
     }
 
     public void addCondition(Text text) {
         String name = text.getString();
-        for (BossBarEvent event : addEvents.values()) {
+        for (BossBarEvent event : addEvents) {
             if (event.condition.equals(name)) {
                 event.trigger();
             }
@@ -62,7 +54,7 @@ public class EventManager {
 
     public void removeCondition(Text text) {
         String name = text.getString();
-        for (BossBarEvent event : removeEvents.values()) {
+        for (BossBarEvent event : removeEvents) {
             if (event.condition.equals(name)) {
                 event.trigger();
             }
@@ -71,7 +63,6 @@ public class EventManager {
 
     public void clear() {
         chatEvents.clear();
-        phaseEvents.clear();
         addEvents.clear();
         removeEvents.clear();
     }

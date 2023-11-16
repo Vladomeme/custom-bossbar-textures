@@ -1,29 +1,26 @@
 package net.cbt.main.events;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.cbt.main.CBTClient;
 import net.cbt.main.bossbar.BossBarManager;
 import net.cbt.main.bossbar.CustomBossBar;
 import net.minecraft.util.Identifier;
 
 import java.util.stream.IntStream;
 
-public abstract class BossBarEvent {
+public class BossBarEvent {
 
-    String name;
-    Object condition;
-    Identifier texture;
-    int[] frames;
-    Type type;
-    Action action;
-    boolean active;
+    public Object condition;
+    public Identifier texture;
+    public int[] frames;
+    public Type type;
+    public Action action;
+    public boolean active;
 
     int duration;
     int localRenderTime = 0;
 
-    public BossBarEvent(String name, Object condition, Identifier texture,
+    public BossBarEvent(Object condition, Identifier texture,
                         int[] frames, Type type, Action action, boolean active) {
-        this.name = name;
         this.condition = condition;
         this.texture = texture;
         this.frames = frames;
@@ -41,7 +38,7 @@ public abstract class BossBarEvent {
         }
     }
 
-    public void tick(CBTClient client) {
+    public void tick(BossBarManager manager, CustomBossBar source, int height) {
         if (!active) return;
         if (action == Action.PLAY) {
             if (localRenderTime == duration) {
@@ -51,18 +48,11 @@ public abstract class BossBarEvent {
             }
             localRenderTime++;
         }
-        BossBarManager bm = client.bossbarManager;
-        CustomBossBar source = bm.customBossBars.get(name);
-        if (source == null) {
-            CBTClient.LOGGER.info("Failed to tick an event of type" + type);
-            return;
-        }
-        this.render(bm, source);
+        this.render(manager, source, height);
     }
 
-    private void render(BossBarManager manager, CustomBossBar bossBar) {
+    private void render(BossBarManager manager, CustomBossBar bossBar, int height) {
         int width = manager.context.getScaledWindowWidth();
-        int height = manager.bossBarHeights.get(name);
         int right = width / 2 - bossBar.width() / 2;
         int textureV = getFrameOffset(action == Action.PLAY ? localRenderTime : manager.renderTime, bossBar.height());
         int textureHeight = frames == null ? bossBar.height() :
@@ -98,5 +88,29 @@ public abstract class BossBarEvent {
         ENABLE,
         DISABLE,
         PLAY
+    }
+
+    public void setCondition(Object condition) {
+        this.condition = condition;
+    }
+
+    public void setTexture(Identifier texture) {
+        this.texture = texture;
+    }
+
+    public void setFrames(int[] frames) {
+        this.frames = frames;
+    }
+
+    public void setType(Type type) {
+        this.type = type;
+    }
+
+    public void setAction(Action action) {
+        this.action = action;
+    }
+
+    public void setDefault(boolean active) {
+        this.active = active;
     }
 }

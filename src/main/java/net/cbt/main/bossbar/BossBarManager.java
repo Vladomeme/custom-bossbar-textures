@@ -49,7 +49,6 @@ public class BossBarManager {
             if (customBossBars.containsKey(name)) {
                 if (customBossBars.get(name).type() == Type.HIDDEN) continue;
                 this.renderCustomBossBar(context, width, height, customBossBars.get(name), bossBar);
-                bossBarHeights.put(name, height);
                 height += 5 + customBossBars.get(name).height();
                 continue;
             }
@@ -57,16 +56,13 @@ public class BossBarManager {
                 if (name.matches(key)) {
                     if (customBossBars.get(key).type() == Type.HIDDEN) continue loop;
                     this.renderCustomBossBar(context, width, height, customBossBars.get(key), bossBar);
-                    bossBarHeights.put(name, height);
                     height += 5 + customBossBars.get(key).height();
                     continue loop;
                 }
             }
             this.renderDefaultBossBar(context, width, height, bossBar);
-            bossBarHeights.put(name, height);
             height += 10 + this.client.textRenderer.fontHeight;
         }
-        eventManager.tick();
         this.context = context;
     }
 
@@ -76,7 +72,7 @@ public class BossBarManager {
         UUID uuid = source.getUuid();
 
         if (activeBossBars.get(uuid).progress() != source.getPercent()) {
-            eventManager.phaseCondition(uuid, activeBossBars.get(uuid).progress(), source.getPercent());
+            eventManager.phaseCondition(bossBar, activeBossBars.get(uuid).progress(), source.getPercent());
         }
 
         if (activeBossBars.get(uuid) == null || alwaysUpdate.get(uuid) || activeBossBars.get(uuid).progress() != source.getPercent()) {
@@ -119,6 +115,8 @@ public class BossBarManager {
             }
         }
         RenderSystem.disableBlend();
+
+        eventManager.tick(bossBar, height);
     }
 
     private void updateActiveTextures(CustomBossBar source, UUID uuid, float progress) {
